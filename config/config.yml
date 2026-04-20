@@ -1,0 +1,63 @@
+mqtt:
+  enabled: false
+
+detectors:
+  coral:
+    type: edgetpu
+    device: usb
+
+model:
+  model_type: yolo-generic
+  width: 320
+  height: 320
+  path: /config/model_cache/best_320_int8_edgetpu.tflite
+  labelmap_path: /config/labels_fsp3.txt
+
+objects:
+  track:
+    - person
+    - fire
+    - smoke
+
+# ── Camera configuration ──────────────────────────────────────────────
+# Replace the RTSP URL with your actual camera stream.
+# You can add more cameras by duplicating the block below.
+cameras:
+  cam_01:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:password@192.168.1.100:554/Streaming/Channels/101
+          roles:
+            - detect
+            - record
+    detect:
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: true
+      retain:
+        days: 7
+        mode: motion
+      events:
+        retain:
+          default: 14
+          mode: active_objects
+    snapshots:
+      enabled: true
+      retain:
+        default: 14
+
+  # cam_02:
+  #   enabled: true
+  #   ffmpeg:
+  #     inputs:
+  #       - path: rtsp://admin:password@192.168.1.101:554/Streaming/Channels/101
+  #         roles:
+  #           - detect
+  #           - record
+  #   detect:
+  #     width: 1280
+  #     height: 720
+  #     fps: 5

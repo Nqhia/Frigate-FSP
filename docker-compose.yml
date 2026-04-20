@@ -1,0 +1,22 @@
+services:
+  frigate:
+    container_name: frigate
+    image: ghcr.io/blakeblackshear/frigate:stable
+    restart: unless-stopped
+    privileged: true
+    shm_size: 256mb
+    volumes:
+      - ./config:/config
+      - ./storage:/media/frigate
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "5000:5000"   # Frigate Web UI
+      - "8971:8971"   # Frigate API
+      - "8554:8554"   # RTSP restream
+      - "8555:8555/tcp" # WebRTC over TCP
+      - "8555:8555/udp" # WebRTC over UDP
+    devices:
+      - /dev/bus/usb:/dev/bus/usb           # USB Coral TPU
+      # - /dev/apex_0:/dev/apex_0           # Uncomment for PCIe Coral
+    environment:
+      FRIGATE_RTSP_PASSWORD: "password"
