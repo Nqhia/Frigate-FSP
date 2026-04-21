@@ -1,0 +1,30 @@
+services:
+  frigate:
+    container_name: frigate
+    image: ${FRIGATE_IMAGE:-ghcr.io/blakeblackshear/frigate:stable-tensorrt}
+    restart: unless-stopped
+    privileged: true
+    shm_size: 256mb
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./config/config-gpu.yml:/config/config.yml
+      - ./config/labels_fsp3.txt:/config/labels_fsp3.txt:ro
+      - ./config/model_cache:/config/model_cache:ro
+      - ./storage:/media/frigate
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "5000:5000"   # Frigate Web UI
+      - "8971:8971"   # Frigate API
+      - "8554:8554"   # RTSP restream
+      - "8555:8555/tcp" # WebRTC over TCP
+      - "8555:8555/udp" # WebRTC over UDP
+    environment:
+      FRIGATE_RTSP_PASSWORD: "password"
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video

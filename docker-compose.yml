@@ -1,3 +1,5 @@
+# EdgeTPU mode — uses config/config.yml + USB/PCIe Coral
+# For GPU (ONNX) mode, use: docker compose -f docker-compose.gpu.yml up -d
 services:
   frigate:
     container_name: frigate

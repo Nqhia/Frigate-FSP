@@ -1,3 +1,9 @@
 *.pyc
 __pycache__/
 .env
+
+# Model files (large binaries — download or export separately)
+*.tflite
+*.onnx
+*.pt
+*.engine
