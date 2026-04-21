@@ -38,8 +38,13 @@ cameras:
 ```
 config/model_cache/
 ├── best_320_int8_edgetpu.tflite   # Edge TPU model
-└── best_320.onnx                  # ONNX model (for GPU)
+└── best_320_frigate.onnx          # ONNX model (for GPU, Frigate-compatible)
 ```
+
+> The ONNX file must expose a single output tensor `(1, 4+NC, N)` for
+> Frigate's `yolo-generic` detector. Default YOLOv9 exports that emit
+> `boxes_dfl_logit` + `class_scores_logit` are **not** compatible; use
+> `scripts/export_onnx_frigate.py` to re-export from `best.pt`.
 
 ### 3. Start Frigate
 
@@ -68,17 +73,35 @@ docker compose -f docker-compose.gpu.yml up -d
 
 ## Exporting the ONNX Model
 
-If you have the original PyTorch weights (`best.pt`), export to ONNX:
+Frigate's `yolo-generic` ONNX parser expects a single output tensor shaped
+`(1, 4+NC, N)` with decoded `xywh` boxes (pixel space) and post-sigmoid
+class scores. The default YOLOv9 export flow produces raw DFL logits, which
+Frigate cannot parse. Use the bundled script to export a compatible model:
 
 ```bash
-# Using Ultralytics
-pip install ultralytics
-yolo export model=best.pt format=onnx imgsz=320 simplify=True opset=13
+python scripts/export_onnx_frigate.py \
+    --weights /path/to/best.pt \
+    --yolov9  /path/to/yolov9 \
+    --cfg     models/detect/yolov9-s-relu6.yaml \
+    --imgsz 320 --nc 3 \
+    --out config/model_cache/best_320_frigate.onnx --simplify
 ```
 
-Then copy the resulting `best.onnx` → `config/model_cache/best_320.onnx`.
+## Verifying Models
 
-> **Note:** The ONNX model uses FP32 precision (not INT8). GPU inference compensates with parallel throughput.
+Run the check script before deploying. It validates shapes, dtypes, and
+(for EdgeTPU) the output layout Frigate's EdgeTPU plugin relies on. It
+parses `.tflite` via flatbuffers, so no Coral device is required:
+
+```bash
+python scripts/check_frigate_models.py \
+    --onnx   config/model_cache/best_320_frigate.onnx \
+    --tflite config/model_cache/best_320_int8_edgetpu.tflite \
+    --expected-nc 3 --imgsz 320
+```
+
+> **Note:** The ONNX model uses FP32 precision (not INT8). GPU inference
+> compensates with parallel throughput.
 
 ## PCIe Coral
 
@@ -117,7 +140,10 @@ frigate-FSP/
 │   ├── labels_fsp3.txt         # Label map (person, fire, smoke)
 │   └── model_cache/
 │       ├── best_320_int8_edgetpu.tflite
-│       └── best_320.onnx
+│       └── best_320_frigate.onnx
+├── scripts/
+│   ├── export_onnx_frigate.py  # Wrap YOLOv9 head -> Frigate-compatible ONNX
+│   └── check_frigate_models.py # Validate ONNX + TFLite shapes for Frigate
 ├── storage/                    # Recordings & snapshots (auto-created)
 └── README.md
 ```
